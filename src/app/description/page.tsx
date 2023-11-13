@@ -1,5 +1,5 @@
 import { check, submit } from '@/lib/actions';
-import assignment from '@/lib/assignment/description';
+import { produceAssignment } from '@/lib/assignment/description';
 import { COMPILE_STATUS_KEY, SUBMISSION_KEY } from '@/lib/constants';
 import { TypeCheckResult } from '@/lib/cpp/compiler';
 import * as session from '@/lib/session';
@@ -33,7 +33,7 @@ export default async function DescriptionPage({
     <div className='mx-auto my-8 max-w-4xl rounded bg-white px-16 py-12 text-gray-700 shadow-lg'>
       <article className='prose max-w-none'>
         <MDXRemote
-          source={assignment(id, name).description}
+          source={produceAssignment(id, name).description}
           options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
         />
       </article>

@@ -352,7 +352,7 @@ export type DefineSpec =
   | PointFree<DefinedValue>;
 
 // prettier-ignore
-type ResolveDefines<T> =
+export type ResolveDefines<T> =
   T extends string ? T :
   T extends number ? T :
   T extends boolean ? T :

@@ -43,9 +43,12 @@ Jepni elementin 3: 25
 Rezultati: 42
 \`\`\`
 `,
-} satisfies AssignmentSpec;
+} satisfies DefineSpec & AssignmentSpec;
 
-export default function produceAssignment(id: string, name: string) {
+export function produceAssignment(
+  id: string,
+  name: string
+): ResolveDefines<AssignmentSpec> {
   const SECRET = 'VQJFT437YW::';
   const instance = produce(SECRET + id, assignment, { id, name });
   return instance;
