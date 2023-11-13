@@ -32,7 +32,7 @@ export async function set<T extends string = string>(
 ): Promise<void> {
   const session = instance();
   if (value === null) {
-    await session.destroy(key);
+    await session.destroy(`${key}_${id}`);
   } else {
     await session.set(`${key}_${id}`, value);
   }

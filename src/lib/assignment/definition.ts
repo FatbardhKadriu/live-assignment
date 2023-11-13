@@ -119,7 +119,7 @@ function resolve<TSpec extends DefineSpec>(
   throw new Error('Unknown define spec.');
 }
 
-type PointFree<T extends DefinedValue> = (c: DefineContext) => T;
+export type PointFree<T extends DefinedValue> = (c: DefineContext) => T;
 
 export function randomInt(minIncl: number, maxExcl: number): PointFree<number> {
   return (c) => {

@@ -1,4 +1,4 @@
-export default function Home() {
+export default function HomePage() {
   return (
     <div className='mx-auto my-16 max-w-sm rounded bg-white p-8 text-gray-700 shadow-lg'>
       <form action='/description' method='get'>
@@ -9,11 +9,20 @@ export default function Home() {
             type='text'
             required
             className='mt-1 block w-full'
+            autoComplete='off'
+            autoCorrect='off'
           />
         </label>
         <label className='mt-4 block'>
           <span>ID</span>
-          <input name='id' type='text' required className='mt-1 block w-full' />
+          <input
+            name='id'
+            type='text'
+            required
+            className='mt-1 block w-full'
+            autoComplete='off'
+            autoCorrect='off'
+          />
         </label>
         <input
           type='submit'
