@@ -1,18 +1,16 @@
-import { DefineSpec, env, produce, text, PointFree } from './definition';
+import {
+  DefineSpec,
+  PointFree,
+  ResolveDefines,
+  env,
+  produce,
+  text,
+} from './definition';
 
 export type AssignmentSpec = {
-  desc: DefineSpec;
-  testStdin?: PointFree<string>;
-};
-
-const assignment = {
-  desc: text`
-# Bazat e Programimit – Detyra 1
-import { DefineSpec, env, produce, text, PointFree } from './definition';
-
-export type AssignmentSpec = DefineSpec & {
   description: string | PointFree<string>;
-  testStdin?: PointFree<string>;
+  testStdin?: string | PointFree<string>;
+  summary?: string | PointFree<string>;
 };
 
 const assignment = {
@@ -43,12 +41,12 @@ Jepni elementin 3: 25
 Rezultati: 42
 \`\`\`
 `,
+  testStdin: [15, 10, 25, 35].join('\n'),
 } satisfies DefineSpec & AssignmentSpec;
 
-export function produceAssignment(
-  id: string,
-  name: string
-): ResolveDefines<AssignmentSpec> {
+export type Assignment = ResolveDefines<AssignmentSpec>;
+
+export function produceAssignment(id: string, name: string): Assignment {
   const SECRET = 'VQJFT437YW::';
   const instance = produce(SECRET + id, assignment, { id, name });
   return instance;
