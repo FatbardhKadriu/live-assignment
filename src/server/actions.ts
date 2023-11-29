@@ -72,7 +72,7 @@ export async function check(formData: FormData) {
   await session.setJSON(id, COMPILE_STATUS_KEY, compileStatus);
 
   if (compileStatus.status === 'OK' && assignment.testStdin) {
-    const executeStatus = runSubmission(assignment.testStdin, submission);
+    const executeStatus = await runSubmission(assignment.testStdin, submission);
     await session.setJSON(id, EXECUTE_STATUS_KEY, executeStatus);
   } else {
     await session.setJSON(id, EXECUTE_STATUS_KEY, null);
@@ -91,32 +91,35 @@ function sanitizeFileName(fileName: string) {
   return fileName.replace(/[\\\/:*?"<>| ]/g, '-');
 }
 
-const SEP =
-  '------------------------------------------------------------------------';
+const SEP_EDGE =
+  '***********************************************************************';
+
+const SEP = SEP_EDGE + '**';
 
 function formatCpp(
   id: string,
   name: string,
   assignmentSummary: string,
   submission: string,
+  time: string,
   output: string | null
 ) {
-  return `/*
-${SEP}
+  return `/*${SEP_EDGE}
 Emri: ${name}
 ID: ${id}
+Ora e dorëzimit: ${time}
 ${SEP}
-
 ${assignmentSummary}
-
 ${SEP}
-
 ${(output ?? '<No execution>').trim()}
+${SEP_EDGE}*/
 
-${SEP}
-*/
+${submission}
 
-${submission}`;
+/*${SEP_EDGE}
+Student: ${name} (${id})
+Pikët:${' '}
+${SEP_EDGE}*/`;
 }
 
 export async function submit(formData: FormData) {
@@ -140,6 +143,7 @@ export async function submit(formData: FormData) {
       name,
       assignment.summary ?? assignment.description,
       submission,
+      time,
       executeStdout
     )
   );
