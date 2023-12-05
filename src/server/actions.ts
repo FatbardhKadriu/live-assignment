@@ -102,7 +102,7 @@ function formatCpp(
   assignmentSummary: string,
   submission: string,
   time: string,
-  output: string | null
+  output: string
 ) {
   return `/*${SEP_EDGE}
 Emri: ${name}
@@ -111,7 +111,7 @@ Ora e dorëzimit: ${time}
 ${SEP}
 ${assignmentSummary}
 ${SEP}
-${(output ?? '<No execution>').trim()}
+${output.trim()}
 ${SEP_EDGE}*/
 
 ${submission}
@@ -127,13 +127,15 @@ export async function submit(formData: FormData) {
   const time = formatTime(new Date());
   const submissionBaseName = sanitizeFileName(`${name}_${id}_${time}`);
 
-  const dstMd = path.join(SUBMISSIONS_MD_DIR, submissionBaseName + '.md');
+  // const dstMd = path.join(SUBMISSIONS_MD_DIR, submissionBaseName + '.md');
   const dstCpp = path.join(SUBMISSIONS_CPP_DIR, submissionBaseName + '.cpp');
 
   let executeStdout: string | null = null;
+  let compileError: string | null = null;
   if (assignment.testStdin) {
     const executeStatus = await runSubmission(assignment.testStdin, submission);
-    executeStdout = executeStatus.output;
+    executeStdout = executeStatus.output.trim();
+    compileError = executeStatus.compilation.log;
   }
 
   await fs.promises.writeFile(
@@ -144,7 +146,7 @@ export async function submit(formData: FormData) {
       assignment.summary ?? assignment.description,
       submission,
       time,
-      executeStdout
+      executeStdout || compileError || '<No output>'
     )
   );
 
