@@ -121,6 +121,8 @@ function resolve<TSpec extends DefineSpec>(
 
 export type PointFree<T extends DefinedValue> = (c: DefineContext) => T;
 
+export type Eventual<T extends DefinedValue> = T | PointFree<T>;
+
 export function randomInt(minIncl: number, maxExcl: number): PointFree<number> {
   return (c) => {
     return Math.floor(c.rng.double() * (maxExcl - minIncl)) + minIncl;
@@ -135,15 +137,6 @@ export function random(): PointFree<number> {
 
 export function env<T extends DefinedValue>(path: string): PointFree<T> {
   return (c) => c.env[path];
-}
-
-export function pick<const TSpec extends DefineSpec = DefineSpec>(
-  specs: ReadonlyArray<TSpec>
-): PointFree<ResolveDefines<TSpec>> {
-  return (c) => {
-    const index = randomInt(0, specs.length)(c);
-    return resolve(c, specs[index]);
-  };
 }
 
 function resolvePath(context: DefineContext, path: string[]): DefinedValue {
@@ -305,6 +298,40 @@ export function bind3<
   };
 }
 
+export function pick<const TSpec extends DefineSpec = DefineSpec>(
+  specs: ReadonlyArray<TSpec>
+): PointFree<ResolveDefines<TSpec>> {
+  return (c) => {
+    const index = randomInt(0, specs.length)(c);
+    return resolve(c, specs[index]);
+  };
+}
+
+export function match<
+  const TCases extends { _?: DefineSpec; [key: string]: DefineSpec },
+>(
+  expr: string | PointFree<string | number | boolean | null | undefined>,
+  cases: TCases
+): PointFree<ResolveDefines<TCases[keyof TCases]>> {
+  if (typeof expr === 'string') {
+    if (expr.startsWith('.')) {
+      expr = '.' + expr;
+    }
+    expr = get(expr);
+  }
+
+  return bind(expr, (val) => {
+    val = String(val);
+    if (Object.hasOwn(cases, val)) {
+      return cases[val] as any;
+    } else if (Object.hasOwn(cases, '_')) {
+      return cases['_'];
+    } else {
+      throw new Error(`No match for '${val}'.`);
+    }
+  });
+}
+
 export function text(
   strings: TemplateStringsArray,
   ...exprs: Array<string | DefineSpec[] | PointFree<DefinedValue>>
@@ -329,7 +356,7 @@ export function text(
 }
 
 export function concat(
-  ...stringExprs: Array<string | PointFree<string>>
+  ...stringExprs: Array<Eventual<string>>
 ): PointFree<string> {
   return (c) =>
     stringExprs.reduce((acc: string, expr) => {
