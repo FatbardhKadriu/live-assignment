@@ -42,7 +42,7 @@ export default async function DescriptionPage({
 
   return (
     <div className='mx-auto mb-32 mt-8 max-w-4xl rounded bg-white px-16 py-12 text-gray-700 shadow-lg'>
-      <article className='prose max-w-none'>
+      <article className='non-selectable prose max-w-none'>
         <MDXRemote
           source={produceAssignment(id, name).description}
           options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
@@ -122,6 +122,21 @@ export default async function DescriptionPage({
           </span>
         )}
       </form>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            document.addEventListener('DOMContentLoaded', function() {
+              var nonSelectableElements = document.querySelectorAll('.non-selectable');
+
+              for (var i = 0; i < nonSelectableElements.length; i++) {
+                nonSelectableElements[i].addEventListener('copy', function(e) {
+                  e.preventDefault();
+                });
+              }
+            });
+          `,
+        }}
+      />
     </div>
   );
 }
