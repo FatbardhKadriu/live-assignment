@@ -341,6 +341,10 @@ export function val<const T extends DefinedValue>(val: T): PointFree<T> {
   return (_c) => val;
 }
 
+export function spec<const TSpec extends DefineSpec>(arg: TSpec): TSpec {
+  return arg;
+}
+
 export type DefineSpec =
   | string
   | number
