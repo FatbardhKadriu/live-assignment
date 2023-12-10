@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import seedrandom, { PRNG } from 'seedrandom';
 
 export type DefineEnv = Record<string, any>;
@@ -17,7 +18,9 @@ export type DefineContext = {
 };
 
 function makeRng(baseSeed: string, path: string[]) {
-  return seedrandom.alea(baseSeed + '::' + path.join('.'));
+  const sha1 = crypto.createHash('sha1');
+  sha1.update(baseSeed + '::' + path.join('.'));
+  return seedrandom.alea(sha1.digest('hex'));
 }
 
 function newContext(baseSeed: string, env: DefineEnv): DefineContext {
