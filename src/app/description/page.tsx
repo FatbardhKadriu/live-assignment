@@ -5,13 +5,13 @@ import {
   SUBMISSION_STATUS_KEY,
 } from '@/lib/constants';
 import { check, clearSubmissionStatus, submit } from '@/server/actions';
-import { produceAssignment } from '@/server/assignment/description-release';
+import { produceAssignment } from '@/server/assignment/description';
 import { ExecutionResult, TypeCheckResult } from '@/server/cpp/compiler';
 import * as session from '@/server/session';
 import { MDXRemote } from 'next-mdx-remote/rsc';
+import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
 
 export default async function DescriptionPage({
   searchParams,
