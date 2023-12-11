@@ -3,205 +3,161 @@ import seedrandom, { PRNG } from 'seedrandom';
 
 export type DefineEnv = Record<string, any>;
 
-export type DefineContext = {
-  readonly env: DefineEnv;
-  readonly baseSeed: string;
+export type DefineSpec =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | DefineSpec[]
+  | { [key: string]: DefineSpec }
+  | Func<DefinedValue>;
 
-  readonly key: string;
-  value: DefinedValue;
+// prettier-ignore
+export type ResolveDefines<T> =
+  T extends string ? T :
+  T extends number ? T :
+  T extends boolean ? T :
+  T extends null ? null :
+  T extends undefined ? undefined :
+  T extends Array<infer U> ? Array<ResolveDefines<U>> :
+  T extends { [key: string]: DefineSpec; } ? { -readonly [key in keyof T]: ResolveDefines<T[key]> } :
+  T extends Func<infer U extends DefinedValue> ? U
+  : never;
 
-  readonly path: DefineContext[];
-  readonly childSpecs: Record<string, DefineSpec>;
-  readonly children: Record<string, DefineContext>;
-  readonly rng: PRNG;
-  anonContextState: number;
-};
-
-function makeRng(baseSeed: string, path: string[]) {
-  const sha1 = crypto.createHash('sha1');
-  sha1.update(baseSeed + '::' + path.join('.'));
-  return seedrandom.alea(sha1.digest('hex'));
-}
-
-function newContext(baseSeed: string, env: DefineEnv): DefineContext {
-  const context: DefineContext = {
-    env,
-    baseSeed,
-    key: '$root',
-    value: undefined,
-    path: [],
-    childSpecs: {},
-    children: {},
-    rng: makeRng(baseSeed, ['$root']),
-    anonContextState: 0,
-  };
-  context.path.push(context);
-  return context;
-}
-
-function newChildContext(context: DefineContext, childKey: string): DefineContext {
-  const childContext: DefineContext = {
-    env: context.env,
-    baseSeed: context.baseSeed,
-    key: childKey,
-    value: undefined,
-    path: [...context.path],
-    childSpecs: {},
-    children: {},
-    rng: makeRng(context.baseSeed, context.path.map((c) => c.key).concat([childKey])),
-    anonContextState: 0,
-  };
-  childContext.path.push(childContext);
-  return childContext;
-}
-
-function newAnonContext(context: DefineContext) {
-  const key = `$$anon_${context.anonContextState++}`;
-  return newChildContext(context, key);
-}
-
-function resolvePartial(
-  context: DefineContext,
-  childSpec: DefineSpec,
-  childKey: string
-): DefinedValue {
-  let childContext: DefineContext;
-
-  if (childKey in context.children) {
-    childContext = context.children[childKey];
-  } else {
-    childContext = newChildContext(context, childKey);
-    context.children[childKey] = childContext;
-  }
-
-  if (typeof childContext.value === 'undefined') {
-    childContext.value = resolve(childContext, childSpec);
-  }
-
-  return childContext.value;
-}
-
-function resolve<TSpec extends DefineSpec>(
-  context: DefineContext,
-  spec: TSpec
-): ResolveDefines<TSpec> {
-  if (typeof spec === 'string') return spec as ResolveDefines<TSpec>;
-  if (typeof spec === 'number') return spec as ResolveDefines<TSpec>;
-  if (typeof spec === 'boolean') return spec as ResolveDefines<TSpec>;
-  if (typeof spec === 'undefined') return spec as ResolveDefines<TSpec>;
-  if (typeof spec === null) return spec as ResolveDefines<TSpec>;
-
-  if (typeof spec === 'function') {
-    return spec(context) as ResolveDefines<TSpec>;
-  }
-
-  if (Array.isArray(spec)) {
-    const resolvedState: DefinedValue[] = [];
-    spec.forEach((spec, i) => (context.childSpecs[i] = spec));
-    for (let i = 0; i < spec.length; i++) {
-      resolvedState.push(resolvePartial(context, spec[i], i.toString()));
-    }
-    return resolvedState as ResolveDefines<TSpec>;
-  }
-
-  if (typeof spec === 'object') {
-    const resolvedState: Record<string, DefinedValue> = {};
-    Object.assign(context.childSpecs, spec);
-    for (const key in spec) {
-      resolvedState[key] = resolvePartial(context, spec[key], key);
-    }
-    return resolvedState as ResolveDefines<TSpec>;
-  }
-
-  throw new Error('Unknown define spec.');
-}
+export type DefinedValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | DefinedValue[]
+  | { [key: string]: DefinedValue };
 
 export type Func<T extends DefinedValue> = (c: DefineContext) => T;
 
 export type Eventual<T extends DefinedValue> = T | Func<T>;
 
+type DefineContextData = {
+  env: DefineEnv;
+  baseSeed: string;
+  key: string;
+  path: DefineContext[];
+  rng: PRNG;
+};
+
+export class DefineContext {
+  readonly _env: DefineEnv;
+  readonly _baseSeed: string;
+
+  readonly _key: string;
+  _value: DefinedValue;
+
+  readonly _path: DefineContext[];
+  readonly _childSpecs: Record<string, DefineSpec>;
+  readonly _children: Record<string, DefineContext>;
+  readonly _rng: PRNG;
+  _anonContextState: number;
+
+  constructor(data: DefineContextData) {
+    this._env = data.env;
+    this._baseSeed = data.baseSeed;
+    this._key = data.key;
+    this._value = undefined;
+    this._path = data.path;
+    this._childSpecs = {};
+    this._children = {};
+    this._rng = data.rng;
+    this._anonContextState = 0;
+  }
+
+  randomInt(minIncl: number, maxExcl: number) {
+    return Math.floor(this._rng.double() * (maxExcl - minIncl)) + minIncl;
+  }
+
+  random(): number {
+    return this._rng.double();
+  }
+
+  pick<T>(array: ReadonlyArray<T>): T {
+    const index = this.randomInt(0, array.length);
+    return array[index];
+  }
+
+  shuffle<T>(array: ReadonlyArray<T>): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = this.randomInt(0, i + 1);
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
+  get<T extends DefinedValue>(path: string): T {
+    const absolute = !path.startsWith('.');
+
+    if (absolute) {
+      const paths = path.split('.');
+      return resolvePath(this._path[0], paths) as T;
+    }
+
+    let levelsUp = 0;
+    while (path.startsWith('.')) {
+      levelsUp++;
+      path = path.substring(1);
+    }
+
+    const paths = path.split('.');
+    const level = Math.max(0, this._path.length - 1 - levelsUp);
+    return resolvePath(this._path[level], paths) as T;
+  }
+
+  env<T extends DefinedValue>(path: string): T {
+    return this._env[path];
+  }
+}
+
+// ----------------------------------------------------------------
+// Method wrappers
+// ----------------------------------------------------------------
+
 export function randomInt(minIncl: number, maxExcl: number): Func<number> {
-  return (c) => {
-    return Math.floor(c.rng.double() * (maxExcl - minIncl)) + minIncl;
-  };
+  return (c) => c.randomInt(minIncl, maxExcl);
 }
 
 export function random(): Func<number> {
-  return (c) => {
-    return c.rng.double();
-  };
+  return (c) => c.random();
 }
 
-export function env<T extends DefinedValue>(path: string): Func<T> {
-  return (c) => c.env[path];
+export function pick<const TSpec extends DefineSpec>(
+  specs: ReadonlyArray<TSpec>
+): Func<ResolveDefines<TSpec>> {
+  return (c) => resolve(c, c.pick(specs));
 }
 
-function resolvePath(context: DefineContext, path: string[]): DefinedValue {
-  let i = 0;
-  for (; i < path.length; i++) {
-    const key = path[i];
-    if (key in context.children) {
-      context = context.children[key];
-    } else {
-      break;
-    }
-  }
-
-  path = path.slice(i);
-
-  if (path.length === 0) {
-    return context.value;
-  }
-
-  if (!(path[0] in context.childSpecs)) {
-    throw new Error(`Missing key '${path[0]}' in object.`);
-  }
-
-  let resolvedValue = resolvePartial(context, context.childSpecs[path[0]], path[0]);
-
-  path = path.slice(1);
-
-  for (const key of path) {
-    if (!resolvedValue || typeof resolvedValue !== 'object') {
-      throw new Error(`Cannot access key '${key}' of a non-object.`);
-    }
-
-    if (key in resolvedValue) {
-      resolvedValue = (resolvedValue as any)[key];
-    } else {
-      throw new Error(`Missing key '${key}' in object.`);
-    }
-  }
-
-  return resolvedValue;
+export function shuffle<const TSpec extends DefineSpec>(
+  specs: ReadonlyArray<TSpec>
+): Func<Array<ResolveDefines<TSpec>>> {
+  return (c) => resolve(c, c.shuffle(specs));
 }
 
 export function get<T extends DefinedValue>(path: string): Func<T> {
-  const absolute = !path.startsWith('.');
-
-  if (absolute) {
-    const paths = path.split('.');
-    return (c) => resolvePath(c.path[0], paths) as T;
-  }
-
-  let levelsUp = 0;
-  while (path.startsWith('.')) {
-    levelsUp++;
-    path = path.substring(1);
-  }
-
-  const paths = path.split('.');
-  return (c) => {
-    const level = Math.max(0, c.path.length - 1 - levelsUp);
-    return resolvePath(c.path[level], paths) as T;
-  };
+  return (c) => c.get(path);
 }
+
+export function env<T extends DefinedValue>(path: string): Func<T> {
+  return (c) => c.env(path);
+}
+
+// ----------------------------------------------------------------
+// Function-only utils
+// ----------------------------------------------------------------
 
 export function map<T extends DefinedValue, U extends DefinedValue>(
   path: string,
   mapper: (t: T, c: DefineContext) => U
 ): Func<U> {
-  return (c) => mapper(get<T>(path)(c), c);
+  return (c) => mapper(c.get<T>(path), c);
 }
 
 export function map2<
@@ -213,7 +169,7 @@ export function map2<
   path2: string,
   mapper: (t1: T1, t2: T2, c: DefineContext) => U
 ): Func<U> {
-  return (c) => mapper(get<T1>(path1)(c), get<T2>(path2)(c), c);
+  return (c) => mapper(c.get<T1>(path1), c.get<T2>(path2), c);
 }
 
 export function map3<
@@ -227,7 +183,7 @@ export function map3<
   path3: string,
   mapper: (t1: T1, t2: T2, t3: T3, c: DefineContext) => U
 ): Func<U> {
-  return (c) => mapper(get<T1>(path1)(c), get<T2>(path2)(c), get<T3>(path3)(c), c);
+  return (c) => mapper(c.get<T1>(path1), c.get<T2>(path2), c.get<T3>(path3), c);
 }
 
 export function map4<
@@ -244,7 +200,7 @@ export function map4<
   mapper: (t1: T1, t2: T2, t3: T3, t4: T4, c: DefineContext) => U
 ): Func<U> {
   return (c) =>
-    mapper(get<T1>(path1)(c), get<T2>(path2)(c), get<T3>(path3)(c), get<T4>(path4)(c), c);
+    mapper(c.get<T1>(path1), c.get<T2>(path2), c.get<T3>(path3), c.get<T4>(path4), c);
 }
 
 export function map5<
@@ -264,23 +220,13 @@ export function map5<
 ): Func<U> {
   return (c) =>
     mapper(
-      get<T1>(path1)(c),
-      get<T2>(path2)(c),
-      get<T3>(path3)(c),
-      get<T4>(path4)(c),
-      get<T5>(path5)(c),
+      c.get<T1>(path1),
+      c.get<T2>(path2),
+      c.get<T3>(path3),
+      c.get<T4>(path4),
+      c.get<T5>(path5),
       c
     );
-}
-
-export function mapMany<TValues extends DefinedValue[], U extends DefinedValue>(
-  paths: string[],
-  mapper: (values: TValues, c: DefineContext) => U
-): Func<U> {
-  return (c) => {
-    const values = paths.map((path) => get(path)(c));
-    return mapper(values as TValues, c);
-  };
 }
 
 export function bind<const T extends DefineSpec, U extends DefineSpec>(
@@ -339,15 +285,6 @@ export function bind3<
   };
 }
 
-export function pick<const TSpec extends DefineSpec>(
-  specs: ReadonlyArray<TSpec>
-): Func<ResolveDefines<TSpec>> {
-  return (c) => {
-    const index = randomInt(0, specs.length)(c);
-    return resolve(c, specs[index]);
-  };
-}
-
 export function match<const TCases extends { _?: DefineSpec; [key: string]: DefineSpec }>(
   expr: string | Func<string | number | boolean | null | undefined>,
   cases: TCases
@@ -382,9 +319,9 @@ export function text(
         if (i < exprs.length) {
           const expr = exprs[i];
           if (typeof expr === 'string') {
-            exprStr = String(get(expr)(c));
+            exprStr = String(c.get(expr));
           } else if (Array.isArray(expr)) {
-            exprStr = String(pick(expr)(c));
+            exprStr = String(resolve(c, c.pick(expr)));
           } else {
             exprStr = String(resolve(c, exprs[i]));
           }
@@ -409,36 +346,9 @@ export function spec<const TSpec extends DefineSpec>(arg: TSpec): TSpec {
   return arg;
 }
 
-export type DefineSpec =
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | DefineSpec[]
-  | { [key: string]: DefineSpec }
-  | Func<DefinedValue>;
-
-// prettier-ignore
-export type ResolveDefines<T> =
-  T extends string ? T :
-  T extends number ? T :
-  T extends boolean ? T :
-  T extends null ? null :
-  T extends undefined ? undefined :
-  T extends Array<infer U> ? Array<ResolveDefines<U>> :
-  T extends { [key: string]: DefineSpec; } ? { -readonly [key in keyof T]: ResolveDefines<T[key]> } :
-  T extends Func<infer U extends DefinedValue> ? U
-  : never;
-
-export type DefinedValue =
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | DefinedValue[]
-  | { [key: string]: DefinedValue };
+// ----------------------------------------------------------------
+// Entry point
+// ----------------------------------------------------------------
 
 export function produce<const TSpec extends DefineSpec>(
   baseSeed: string,
@@ -447,4 +357,139 @@ export function produce<const TSpec extends DefineSpec>(
 ): ResolveDefines<TSpec> {
   const context = newContext(baseSeed, env);
   return resolve(context, spec);
+}
+
+// ----------------------------------------------------------------
+// Internal functions
+// ----------------------------------------------------------------
+
+function makeRng(baseSeed: string, path: string[]) {
+  const sha1 = crypto.createHash('sha1');
+  sha1.update(baseSeed + '::' + path.join('.'));
+  return seedrandom.alea(sha1.digest('hex'));
+}
+
+function newContext(baseSeed: string, env: DefineEnv): DefineContext {
+  const context = new DefineContext({
+    env,
+    baseSeed,
+    key: '$root',
+    path: [],
+    rng: makeRng(baseSeed, ['$root']),
+  });
+  context._path.push(context);
+  return context;
+}
+
+function newChildContext(context: DefineContext, childKey: string): DefineContext {
+  const childContext = new DefineContext({
+    env: context._env,
+    baseSeed: context._baseSeed,
+    key: childKey,
+    path: [...context._path],
+    rng: makeRng(context._baseSeed, context._path.map((c) => c._key).concat([childKey])),
+  });
+  childContext._path.push(childContext);
+  return childContext;
+}
+
+function newAnonContext(context: DefineContext) {
+  const key = `$$anon_${context._anonContextState++}`;
+  return newChildContext(context, key);
+}
+
+function resolvePartial(
+  context: DefineContext,
+  childSpec: DefineSpec,
+  childKey: string
+): DefinedValue {
+  let childContext: DefineContext;
+
+  if (childKey in context._children) {
+    childContext = context._children[childKey];
+  } else {
+    childContext = newChildContext(context, childKey);
+    context._children[childKey] = childContext;
+  }
+
+  if (typeof childContext._value === 'undefined') {
+    childContext._value = resolve(childContext, childSpec);
+  }
+
+  return childContext._value;
+}
+
+function resolve<TSpec extends DefineSpec>(
+  context: DefineContext,
+  spec: TSpec
+): ResolveDefines<TSpec> {
+  if (typeof spec === 'string') return spec as ResolveDefines<TSpec>;
+  if (typeof spec === 'number') return spec as ResolveDefines<TSpec>;
+  if (typeof spec === 'boolean') return spec as ResolveDefines<TSpec>;
+  if (typeof spec === 'undefined') return spec as ResolveDefines<TSpec>;
+  if (typeof spec === null) return spec as ResolveDefines<TSpec>;
+
+  if (typeof spec === 'function') {
+    return spec(context) as ResolveDefines<TSpec>;
+  }
+
+  if (Array.isArray(spec)) {
+    const resolvedState: DefinedValue[] = [];
+    spec.forEach((spec, i) => (context._childSpecs[i] = spec));
+    for (let i = 0; i < spec.length; i++) {
+      resolvedState.push(resolvePartial(context, spec[i], i.toString()));
+    }
+    return resolvedState as ResolveDefines<TSpec>;
+  }
+
+  if (typeof spec === 'object') {
+    const resolvedState: Record<string, DefinedValue> = {};
+    Object.assign(context._childSpecs, spec);
+    for (const key in spec) {
+      resolvedState[key] = resolvePartial(context, spec[key], key);
+    }
+    return resolvedState as ResolveDefines<TSpec>;
+  }
+
+  throw new Error('Unknown define spec.');
+}
+
+function resolvePath(context: DefineContext, path: string[]): DefinedValue {
+  let i = 0;
+  for (; i < path.length; i++) {
+    const key = path[i];
+    if (key in context._children) {
+      context = context._children[key];
+    } else {
+      break;
+    }
+  }
+
+  path = path.slice(i);
+
+  if (path.length === 0) {
+    return context._value;
+  }
+
+  if (!(path[0] in context._childSpecs)) {
+    throw new Error(`Missing key '${path[0]}' in object.`);
+  }
+
+  let resolvedValue = resolvePartial(context, context._childSpecs[path[0]], path[0]);
+
+  path = path.slice(1);
+
+  for (const key of path) {
+    if (!resolvedValue || typeof resolvedValue !== 'object') {
+      throw new Error(`Cannot access key '${key}' of a non-object.`);
+    }
+
+    if (key in resolvedValue) {
+      resolvedValue = (resolvedValue as any)[key];
+    } else {
+      throw new Error(`Missing key '${key}' in object.`);
+    }
+  }
+
+  return resolvedValue;
 }
