@@ -5,11 +5,13 @@ import {
   SUBMISSION_STATUS_KEY,
 } from '@/lib/constants';
 import { check, clearSubmissionStatus, submit } from '@/server/actions';
-import { produceAssignment } from '@/server/assignment/description';
+import { produceAssignment } from '@/server/assignment/description-release';
 import { ExecutionResult, TypeCheckResult } from '@/server/cpp/compiler';
 import * as session from '@/server/session';
 import { MDXRemote } from 'next-mdx-remote/rsc';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 
 export default async function DescriptionPage({
   searchParams,
@@ -45,7 +47,12 @@ export default async function DescriptionPage({
       <article className='non-selectable prose max-w-none'>
         <MDXRemote
           source={produceAssignment(id, name).description}
-          options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
+          options={{
+            mdxOptions: {
+              remarkPlugins: [remarkGfm, remarkMath],
+              rehypePlugins: [rehypeKatex as any],
+            },
+          }}
         />
       </article>
       <form className='mt-12'>
