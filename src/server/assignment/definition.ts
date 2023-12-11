@@ -103,7 +103,7 @@ function resolve<TSpec extends DefineSpec>(
 
   if (Array.isArray(spec)) {
     const resolvedState: DefinedValue[] = [];
-    spec.map((spec, i) => (context.childSpecs[i] = spec));
+    spec.forEach((spec, i) => (context.childSpecs[i] = spec));
     for (let i = 0; i < spec.length; i++) {
       resolvedState.push(resolvePartial(context, spec[i], i.toString()));
     }
@@ -122,23 +122,23 @@ function resolve<TSpec extends DefineSpec>(
   throw new Error('Unknown define spec.');
 }
 
-export type PointFree<T extends DefinedValue> = (c: DefineContext) => T;
+export type Func<T extends DefinedValue> = (c: DefineContext) => T;
 
-export type Eventual<T extends DefinedValue> = T | PointFree<T>;
+export type Eventual<T extends DefinedValue> = T | Func<T>;
 
-export function randomInt(minIncl: number, maxExcl: number): PointFree<number> {
+export function randomInt(minIncl: number, maxExcl: number): Func<number> {
   return (c) => {
     return Math.floor(c.rng.double() * (maxExcl - minIncl)) + minIncl;
   };
 }
 
-export function random(): PointFree<number> {
+export function random(): Func<number> {
   return (c) => {
     return c.rng.double();
   };
 }
 
-export function env<T extends DefinedValue>(path: string): PointFree<T> {
+export function env<T extends DefinedValue>(path: string): Func<T> {
   return (c) => c.env[path];
 }
 
@@ -186,7 +186,7 @@ function resolvePath(context: DefineContext, path: string[]): DefinedValue {
   return resolvedValue;
 }
 
-export function get<T extends DefinedValue>(path: string): PointFree<T> {
+export function get<T extends DefinedValue>(path: string): Func<T> {
   const absolute = !path.startsWith('.');
 
   if (absolute) {
@@ -210,7 +210,7 @@ export function get<T extends DefinedValue>(path: string): PointFree<T> {
 export function map<T extends DefinedValue, U extends DefinedValue>(
   path: string,
   mapper: (t: T, c: DefineContext) => U
-): PointFree<U> {
+): Func<U> {
   return (c) => mapper(get<T>(path)(c), c);
 }
 
@@ -222,7 +222,7 @@ export function map2<
   path1: string,
   path2: string,
   mapper: (t1: T1, t2: T2, c: DefineContext) => U
-): PointFree<U> {
+): Func<U> {
   return (c) => mapper(get<T1>(path1)(c), get<T2>(path2)(c), c);
 }
 
@@ -236,15 +236,74 @@ export function map3<
   path2: string,
   path3: string,
   mapper: (t1: T1, t2: T2, t3: T3, c: DefineContext) => U
-): PointFree<U> {
+): Func<U> {
   return (c) =>
     mapper(get<T1>(path1)(c), get<T2>(path2)(c), get<T3>(path3)(c), c);
 }
 
-export function bind<T extends DefineSpec, U extends DefineSpec>(
+export function map4<
+  T1 extends DefinedValue,
+  T2 extends DefinedValue,
+  T3 extends DefinedValue,
+  T4 extends DefinedValue,
+  U extends DefinedValue,
+>(
+  path1: string,
+  path2: string,
+  path3: string,
+  path4: string,
+  mapper: (t1: T1, t2: T2, t3: T3, t4: T4, c: DefineContext) => U
+): Func<U> {
+  return (c) =>
+    mapper(
+      get<T1>(path1)(c),
+      get<T2>(path2)(c),
+      get<T3>(path3)(c),
+      get<T4>(path4)(c),
+      c
+    );
+}
+
+export function map5<
+  T1 extends DefinedValue,
+  T2 extends DefinedValue,
+  T3 extends DefinedValue,
+  T4 extends DefinedValue,
+  T5 extends DefinedValue,
+  U extends DefinedValue,
+>(
+  path1: string,
+  path2: string,
+  path3: string,
+  path4: string,
+  path5: string,
+  mapper: (t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, c: DefineContext) => U
+): Func<U> {
+  return (c) =>
+    mapper(
+      get<T1>(path1)(c),
+      get<T2>(path2)(c),
+      get<T3>(path3)(c),
+      get<T4>(path4)(c),
+      get<T5>(path5)(c),
+      c
+    );
+}
+
+export function mapMany<TValues extends DefinedValue[], U extends DefinedValue>(
+  paths: string[],
+  mapper: (values: TValues, c: DefineContext) => U
+): Func<U> {
+  return (c) => {
+    const values = paths.map((path) => get(path)(c));
+    return mapper(values as TValues, c);
+  };
+}
+
+export function bind<const T extends DefineSpec, U extends DefineSpec>(
   spec: T,
   mapper: (t1: ResolveDefines<T>, c: DefineContext) => U
-): PointFree<ResolveDefines<U>> {
+): Func<ResolveDefines<U>> {
   return (c) => {
     const anonC = newAnonContext(c);
     const t = resolve(anonC, spec);
@@ -253,8 +312,8 @@ export function bind<T extends DefineSpec, U extends DefineSpec>(
 }
 
 export function bind2<
-  T1 extends DefineSpec,
-  T2 extends DefineSpec,
+  const T1 extends DefineSpec,
+  const T2 extends DefineSpec,
   U extends DefineSpec,
 >(
   spec1: T1,
@@ -264,7 +323,7 @@ export function bind2<
     t2: ResolveDefines<T2>,
     c: DefineContext
   ) => U
-): PointFree<ResolveDefines<U>> {
+): Func<ResolveDefines<U>> {
   return (c) => {
     const anonC1 = newAnonContext(c);
     const anonC2 = newAnonContext(c);
@@ -275,9 +334,9 @@ export function bind2<
 }
 
 export function bind3<
-  T1 extends DefineSpec,
-  T2 extends DefineSpec,
-  T3 extends DefineSpec,
+  const T1 extends DefineSpec,
+  const T2 extends DefineSpec,
+  const T3 extends DefineSpec,
   U extends DefineSpec,
 >(
   spec1: T1,
@@ -289,7 +348,7 @@ export function bind3<
     t3: ResolveDefines<T3>,
     c: DefineContext
   ) => U
-): PointFree<ResolveDefines<U>> {
+): Func<ResolveDefines<U>> {
   return (c) => {
     const anonC1 = newAnonContext(c);
     const anonC2 = newAnonContext(c);
@@ -301,9 +360,9 @@ export function bind3<
   };
 }
 
-export function pick<const TSpec extends DefineSpec = DefineSpec>(
+export function pick<const TSpec extends DefineSpec>(
   specs: ReadonlyArray<TSpec>
-): PointFree<ResolveDefines<TSpec>> {
+): Func<ResolveDefines<TSpec>> {
   return (c) => {
     const index = randomInt(0, specs.length)(c);
     return resolve(c, specs[index]);
@@ -313,9 +372,9 @@ export function pick<const TSpec extends DefineSpec = DefineSpec>(
 export function match<
   const TCases extends { _?: DefineSpec; [key: string]: DefineSpec },
 >(
-  expr: string | PointFree<string | number | boolean | null | undefined>,
+  expr: string | Func<string | number | boolean | null | undefined>,
   cases: TCases
-): PointFree<ResolveDefines<TCases[keyof TCases]>> {
+): Func<ResolveDefines<TCases[keyof TCases]>> {
   if (typeof expr === 'string') {
     if (expr.startsWith('.')) {
       expr = '.' + expr;
@@ -337,8 +396,8 @@ export function match<
 
 export function text(
   strings: TemplateStringsArray,
-  ...exprs: Array<string | DefineSpec[] | PointFree<DefinedValue>>
-): PointFree<string> {
+  ...exprs: Array<string | DefineSpec[] | Func<DefinedValue>>
+): Func<string> {
   return (c) =>
     strings
       .reduce((result, str, i) => {
@@ -358,16 +417,14 @@ export function text(
       .trim();
 }
 
-export function concat(
-  ...stringExprs: Array<Eventual<string>>
-): PointFree<string> {
+export function concat(...stringExprs: Array<Eventual<string>>): Func<string> {
   return (c) =>
     stringExprs.reduce((acc: string, expr) => {
       return acc + (typeof expr === 'string' ? expr : resolve(c, expr));
     }, '');
 }
 
-export function val<const T extends DefinedValue>(val: T): PointFree<T> {
+export function val<const T extends DefinedValue>(val: T): Func<T> {
   return (_c) => val;
 }
 
@@ -383,7 +440,7 @@ export type DefineSpec =
   | undefined
   | DefineSpec[]
   | { [key: string]: DefineSpec }
-  | PointFree<DefinedValue>;
+  | Func<DefinedValue>;
 
 // prettier-ignore
 export type ResolveDefines<T> =
@@ -394,7 +451,7 @@ export type ResolveDefines<T> =
   T extends undefined ? undefined :
   T extends Array<infer U> ? Array<ResolveDefines<U>> :
   T extends { [key: string]: DefineSpec; } ? { -readonly [key in keyof T]: ResolveDefines<T[key]> } :
-  T extends PointFree<infer U extends DefinedValue> ? U
+  T extends Func<infer U extends DefinedValue> ? U
   : never;
 
 export type DefinedValue =

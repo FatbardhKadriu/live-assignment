@@ -1,9 +1,9 @@
-import { PointFree, ResolveDefines } from './definition';
+import { Func, ResolveDefines } from './definition';
 
 export type AssignmentSpec = {
-  description: string | PointFree<string>;
-  summary?: string | PointFree<string>;
-  testStdin?: string | PointFree<string>;
+  description: string | Func<string>;
+  summary?: string | Func<string>;
+  testStdin?: string | Func<string>;
 };
 
 export type Assignment = ResolveDefines<AssignmentSpec>;
