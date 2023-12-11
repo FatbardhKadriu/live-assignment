@@ -39,10 +39,7 @@ function newContext(baseSeed: string, env: DefineEnv): DefineContext {
   return context;
 }
 
-function newChildContext(
-  context: DefineContext,
-  childKey: string
-): DefineContext {
+function newChildContext(context: DefineContext, childKey: string): DefineContext {
   const childContext: DefineContext = {
     env: context.env,
     baseSeed: context.baseSeed,
@@ -51,10 +48,7 @@ function newChildContext(
     path: [...context.path],
     childSpecs: {},
     children: {},
-    rng: makeRng(
-      context.baseSeed,
-      context.path.map((c) => c.key).concat([childKey])
-    ),
+    rng: makeRng(context.baseSeed, context.path.map((c) => c.key).concat([childKey])),
     anonContextState: 0,
   };
   childContext.path.push(childContext);
@@ -163,11 +157,7 @@ function resolvePath(context: DefineContext, path: string[]): DefinedValue {
     throw new Error(`Missing key '${path[0]}' in object.`);
   }
 
-  let resolvedValue = resolvePartial(
-    context,
-    context.childSpecs[path[0]],
-    path[0]
-  );
+  let resolvedValue = resolvePartial(context, context.childSpecs[path[0]], path[0]);
 
   path = path.slice(1);
 
@@ -237,8 +227,7 @@ export function map3<
   path3: string,
   mapper: (t1: T1, t2: T2, t3: T3, c: DefineContext) => U
 ): Func<U> {
-  return (c) =>
-    mapper(get<T1>(path1)(c), get<T2>(path2)(c), get<T3>(path3)(c), c);
+  return (c) => mapper(get<T1>(path1)(c), get<T2>(path2)(c), get<T3>(path3)(c), c);
 }
 
 export function map4<
@@ -255,13 +244,7 @@ export function map4<
   mapper: (t1: T1, t2: T2, t3: T3, t4: T4, c: DefineContext) => U
 ): Func<U> {
   return (c) =>
-    mapper(
-      get<T1>(path1)(c),
-      get<T2>(path2)(c),
-      get<T3>(path3)(c),
-      get<T4>(path4)(c),
-      c
-    );
+    mapper(get<T1>(path1)(c), get<T2>(path2)(c), get<T3>(path3)(c), get<T4>(path4)(c), c);
 }
 
 export function map5<
@@ -318,11 +301,7 @@ export function bind2<
 >(
   spec1: T1,
   spec2: T2,
-  mapper: (
-    t1: ResolveDefines<T1>,
-    t2: ResolveDefines<T2>,
-    c: DefineContext
-  ) => U
+  mapper: (t1: ResolveDefines<T1>, t2: ResolveDefines<T2>, c: DefineContext) => U
 ): Func<ResolveDefines<U>> {
   return (c) => {
     const anonC1 = newAnonContext(c);
@@ -369,9 +348,7 @@ export function pick<const TSpec extends DefineSpec>(
   };
 }
 
-export function match<
-  const TCases extends { _?: DefineSpec; [key: string]: DefineSpec },
->(
+export function match<const TCases extends { _?: DefineSpec; [key: string]: DefineSpec }>(
   expr: string | Func<string | number | boolean | null | undefined>,
   cases: TCases
 ): Func<ResolveDefines<TCases[keyof TCases]>> {

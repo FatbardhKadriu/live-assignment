@@ -8,11 +8,7 @@ export const metadata: Metadata = {
   title: 'Assignment',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang='sq'>
       <body className={inter.className + ' bg-gray-100'}>{children}</body>

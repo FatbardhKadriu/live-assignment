@@ -60,10 +60,7 @@ export async function typeCheckFile(file: string): Promise<TypeCheckResult> {
   });
 }
 
-function withSource<T>(
-  source: string,
-  fn: (path: string) => Promise<T>
-): Promise<T> {
+function withSource<T>(source: string, fn: (path: string) => Promise<T>): Promise<T> {
   return withFile(
     ({ fd, path }) => {
       return new Promise((resolve, reject) => {
@@ -100,9 +97,7 @@ export async function compileFile(
   return new Promise((resolve) => {
     const cwd = path.dirname(file);
     exec(
-      `g++ -Wall -Wextra -Wfatal-errors "${path.basename(
-        file
-      )}" -o "${outputFile}"`,
+      `g++ -Wall -Wextra -Wfatal-errors "${path.basename(file)}" -o "${outputFile}"`,
       { cwd, timeout: 5000 },
       (error, stdout, stderr) => {
         resolve({
@@ -121,10 +116,7 @@ export function compileSource(
   return withSource(source, (path) => compileFile(path, outputFile));
 }
 
-export async function evalFile(
-  file: string,
-  stdin?: string
-): Promise<ExecutionResult> {
+export async function evalFile(file: string, stdin?: string): Promise<ExecutionResult> {
   const compilation = await compileFile(file);
   if (compilation.status !== 'OK') {
     return {
@@ -168,9 +160,6 @@ export async function evalFile(
   });
 }
 
-export function evalSource(
-  source: string,
-  stdin?: string
-): Promise<ExecutionResult> {
+export function evalSource(source: string, stdin?: string): Promise<ExecutionResult> {
   return withSource(source, (file) => evalFile(file, stdin));
 }

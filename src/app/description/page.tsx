@@ -32,14 +32,8 @@ export default async function DescriptionPage({
 
   const submission = (await session.get(id, SUBMISSION_KEY)) ?? '';
 
-  const compileStatus = await session.getJSON<TypeCheckResult>(
-    id,
-    COMPILE_STATUS_KEY
-  );
-  const executeStatus = await session.getJSON<ExecutionResult>(
-    id,
-    EXECUTE_STATUS_KEY
-  );
+  const compileStatus = await session.getJSON<TypeCheckResult>(id, COMPILE_STATUS_KEY);
+  const executeStatus = await session.getJSON<ExecutionResult>(id, EXECUTE_STATUS_KEY);
   const submissionStatus = await session.get(id, SUBMISSION_STATUS_KEY);
 
   return (

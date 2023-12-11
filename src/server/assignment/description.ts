@@ -96,13 +96,9 @@ Shembull të ekzekutimit të programit gjeni në vijim:
 \`\`\`
 ${'problem.promptFirst'}
 
-${map2(
-  'problem.exampleArray',
-  'problem.promptEach',
-  (arr: number[], s: string) => {
-    return arr.map((val, i) => `${s} ${i + 1}: ${val}`).join('\n');
-  }
-)}
+${map2('problem.exampleArray', 'problem.promptEach', (arr: number[], s: string) => {
+  return arr.map((val, i) => `${s} ${i + 1}: ${val}`).join('\n');
+})}
 
 ${'problem.agg.exampleOutput'}
 \`\`\``,

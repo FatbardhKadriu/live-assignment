@@ -17,10 +17,7 @@ export async function get<T extends string = string>(
   return (await session.get(`${key}_${id}`)) || null;
 }
 
-export async function getJSON<T = unknown>(
-  id: string,
-  key: string
-): Promise<T | null> {
+export async function getJSON<T = unknown>(id: string, key: string): Promise<T | null> {
   const value = await get(id, key);
   return typeof value === 'string' ? JSON.parse(value) : null;
 }

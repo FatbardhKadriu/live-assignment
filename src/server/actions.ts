@@ -34,9 +34,7 @@ async function readSubmission(formData: FormData) {
 }
 
 function reloadPage(id: string, name: string, hash?: string) {
-  redirect(
-    `/description?name=${encodeURIComponent(name)}&id=${encodeURIComponent(id)}`
-  );
+  redirect(`/description?name=${encodeURIComponent(name)}&id=${encodeURIComponent(id)}`);
 }
 
 function injectSubmission(submission: string) {
@@ -53,9 +51,7 @@ std::istream& operator>>=(std::istream& is, T& x) {
 async function runSubmission(stdin: string, submission: string) {
   const executeStatus = await evalSource(injectSubmission(submission), stdin);
 
-  executeStatus.output = executeStatus.output
-    .replace(/\r\n/g, '\n')
-    .substring(0, 512);
+  executeStatus.output = executeStatus.output.replace(/\r\n/g, '\n').substring(0, 512);
 
   if (executeStatus.error) {
     executeStatus.error = executeStatus.error.substring(0, 512);
@@ -150,11 +146,7 @@ export async function submit(formData: FormData) {
     )
   );
 
-  await session.set(
-    id,
-    SUBMISSION_STATUS_KEY,
-    `Dorëzimi është pranuar në ora ${time}.`
-  );
+  await session.set(id, SUBMISSION_STATUS_KEY, `Dorëzimi është pranuar në ora ${time}.`);
   await session.set(id, SUBMISSION_KEY, null);
   reloadPage(id, name);
 }
