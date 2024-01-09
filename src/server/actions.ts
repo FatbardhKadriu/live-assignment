@@ -51,10 +51,10 @@ std::istream& operator>>=(std::istream& is, T& x) {
 async function runSubmission(stdin: string, submission: string) {
   const executeStatus = await evalSource(injectSubmission(submission), stdin);
 
-  executeStatus.output = executeStatus.output.replace(/\r\n/g, '\n').substring(0, 512);
+  executeStatus.output = executeStatus.output.replace(/\r\n/g, '\n').substring(0, 8192);
 
   if (executeStatus.error) {
-    executeStatus.error = executeStatus.error.substring(0, 512);
+    executeStatus.error = executeStatus.error.substring(0, 8192);
   }
 
   return executeStatus;
