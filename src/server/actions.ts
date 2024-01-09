@@ -67,7 +67,7 @@ export async function check(formData: FormData) {
 
   await session.setJSON(id, COMPILE_STATUS_KEY, compileStatus);
 
-  if (compileStatus.status === 'OK' && assignment.testStdin) {
+  if (compileStatus.status === 'OK' && typeof assignment.testStdin === 'string') {
     const executeStatus = await runSubmission(assignment.testStdin, submission);
     await session.setJSON(id, EXECUTE_STATUS_KEY, executeStatus);
   } else {
@@ -128,7 +128,7 @@ export async function submit(formData: FormData) {
 
   let executeStdout: string | null = null;
   let compileError: string | null = null;
-  if (assignment.testStdin) {
+  if (typeof assignment.testStdin === 'string') {
     const executeStatus = await runSubmission(assignment.testStdin, submission);
     executeStdout = executeStatus.output.trim();
     compileError = executeStatus.compilation.log;
