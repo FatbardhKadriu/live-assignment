@@ -20,7 +20,7 @@
     "react": "^18",
     "react-dom": "^18",
     "rehype-katex": "^7.0.0",
-    "remark-gfm": "^4.0.0",
+    "remark-gfm": "^1.0.0",
     "remark-math": "^5.1.1",
     "seedrandom": "^3.0.5",
     "tmp-promise": "^3.0.3"

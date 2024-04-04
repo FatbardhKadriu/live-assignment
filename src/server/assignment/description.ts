@@ -72,11 +72,13 @@ i cili ka gjatësinë ${'.arrayLength'} dhe mban numra të plotë.
 1. **(4)** ${'problem.arrayType'} ${'problem.arrayName'}[${'problem.arrayLength'}]
 2. **(3+1)** Agg ${'problem.agg.type'}`,
   description: text`
-# Bazat e Programimit – Detyra 1
+# Algoritmet dhe Strukturat e të Dhënave – Detyra 1
 
-| Student        | ID           |
-| -------------- | ------------ |
-| ${env('name')} | ${env('id')} |
+
+| Studenti | ID  | 
+| :- | :- |
+| ${env('name')} | ${env('id')} | 
+
 
 ## Përshkrimi
 
